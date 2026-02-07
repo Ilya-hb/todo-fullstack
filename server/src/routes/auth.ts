@@ -1,7 +1,8 @@
 import express from "express";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 import { prisma } from "../lib/prisma.ts";
-import { UserSchema } from "../schemas/authSchema.ts";
+import { LoginSchema, UserSchema } from "../schemas/authSchema.ts";
 import { validate } from "../middleware/validators.ts";
 
 const router = express.Router();
@@ -37,8 +38,26 @@ router.post("/register", validate(UserSchema), async (req, res) => {
   }
 });
 
-router.post("/login", (req, res) => {
+router.post("/login", validate(LoginSchema), async (req, res) => {
   const { email, password } = req.body;
-  res.json({ message: "Login service works" });
+  const existingUser = await prisma.user.findUnique({
+    where: {
+      email: email,
+    },
+  });
+
+  const isPasswordValid = await bcrypt.compare(
+    password,
+    existingUser?.password || "",
+  );
+
+  if (!existingUser || !isPasswordValid)
+    return res.status(401).json({ message: "Invalid credentials" });
+  else {
+    const token = jwt.sign({ id: existingUser.id }, process.env.JWT_SECRET!, {
+      expiresIn: "24h",
+    });
+    return res.status(200).json({ message: "Login successful", token });
+  }
 });
 export default router;
