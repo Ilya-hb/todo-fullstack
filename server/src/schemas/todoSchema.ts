@@ -11,4 +11,5 @@ export const todoSchema = z.object({
     .min(10, "Description must be at least 10 characters long")
     .max(1000, "Description must not be more than 1000 characters long")
     .trim(),
+  completed: z.boolean().optional(),
 });
